@@ -84,7 +84,7 @@
 
     <div class="output" v-if="outputData.length">
       <h4>输出 JSON（预览，已按公司排序）</h4>
-      <textarea rows="12" style="width:100%;">{{ prettyJson }}</textarea>
+      <textarea rows="12" style="width:98%;">{{ prettyJson }}</textarea>
     </div>
 
   </div>
@@ -413,19 +413,21 @@ h4 {
 /* Glass Cards */
 .uploader, .mapping, .output {
   background: var(--bg-panel);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 16px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 24px;
   padding: 24px;
   border: 1px solid var(--border-color);
   margin-bottom: 24px;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   color: var(--text-primary);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
 .uploader:hover, .mapping:hover, .output:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-color: var(--text-secondary);
 }
 
 .upload-row {
@@ -662,7 +664,7 @@ button:not(:disabled):nth-child(3) {
   width: 100%;
   max-height: 240px;
   overflow-y: auto;
-  background: var(--bg-panel);
+  background: var(--dropdown-bg, var(--bg-panel));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--border-color);
@@ -690,11 +692,33 @@ button:not(:disabled):nth-child(3) {
 }
 
 .dropdown-item input {
+  -webkit-appearance: none;
+  appearance: none;
   cursor: pointer;
   width: 16px;
   height: 16px;
-  background: transparent;
+  background: #fff;
   border: 1px solid var(--text-secondary);
+  border-radius: 3px;
+  position: relative;
+  margin: 0;
+}
+
+.dropdown-item input:checked {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.dropdown-item input:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 4px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 /* Output Area */

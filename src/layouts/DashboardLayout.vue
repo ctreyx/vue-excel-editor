@@ -9,7 +9,7 @@
       
       <nav class="nav-menu">
         <div class="nav-group">
-          <div class="nav-label" v-if="currentTheme !== 'theme-black'">MAIN MENU</div>
+          <!-- <div class="nav-label" v-if="currentTheme !== 'theme-black'">MAIN MENU</div> -->
           <router-link to="/person-extract" class="nav-item active" title="人员提取">
             <span class="icon">📊</span>
             <span class="text" v-if="currentTheme !== 'theme-black'">人员提取</span>
@@ -26,7 +26,7 @@
       </nav>
 
       <div class="theme-switcher">
-        <div class="nav-label" v-if="currentTheme !== 'theme-black'">THEME STYLE</div>
+        <div class="nav-label" v-if="currentTheme !== 'theme-black'">主题风格</div>
         <div class="theme-options">
           <!-- <button 
             class="theme-btn blue" 
@@ -495,11 +495,12 @@ onMounted(() => {
 /* Theme Blue */
 .theme-blue {
   --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-secondary: rgba(255, 255, 255, 0.8);
   --text-tertiary: rgba(255, 255, 255, 0.5);
-  --bg-panel: rgba(255, 255, 255, 0.03);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --input-bg: rgba(0, 0, 0, 0.2);
+  --bg-panel: rgba(255, 255, 255, 0.08);
+  --border-color: rgba(255, 255, 255, 0.15);
+  --input-bg: rgba(0, 0, 0, 0.25);
+  --dropdown-bg: rgba(20, 20, 35, 0.95);
   --accent-color: #00d2ff;
 
   background: radial-gradient(circle at top left, #1a1a2e, #16213e, #0f3460);
@@ -519,6 +520,7 @@ onMounted(() => {
   --bg-panel: rgba(255, 255, 255, 0.03);
   --border-color: rgba(255, 255, 255, 0.1);
   --input-bg: rgba(0, 0, 0, 0.2);
+  --dropdown-bg: rgba(10, 10, 10, 0.95);
   --accent-color: #00ff9d;
 
   background: #050505;
@@ -539,6 +541,7 @@ onMounted(() => {
   --bg-panel: rgba(255, 255, 255, 0.3);
   --border-color: rgba(255, 255, 255, 0.5);
   --input-bg: rgba(255, 255, 255, 0.3);
+  --dropdown-bg: rgba(255, 255, 255, 0.9);
   --accent-color: #8e24aa;
 
   background: radial-gradient(circle at bottom right, #6a1b9a, #8e24aa, #ab47bc); /* Lighter purple gradient */
@@ -628,10 +631,11 @@ onMounted(() => {
   --text-tertiary: #7f8c8d;
   --bg-panel: rgba(255, 255, 255, 0.65);
   --border-color: rgba(255, 255, 255, 0.8);
-  --input-bg: rgba(255, 255, 255, 0.6);
+  --input-bg: rgba(255, 255, 255, 0.5);
+  --dropdown-bg: #ffffff;
   --accent-color: #2c3e50;
 
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); /* Soft silver/white gradient */
+  background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
   color: var(--text-primary);
 }
 .theme-white .sidebar {
