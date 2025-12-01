@@ -1,15 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import DashboardLayout from '../layouts/DashboardLayout.vue';
 
 const routes = [
-//   {
-//     path: '/',
-//     name: 'Home',
-//     component: () => import('../components/ExcelEditor.vue')
-//   },
   {
-    path: '/person-extract',
-    name: '人员提取',
-    component: () => import('../views/PersonExtract.vue')
+    path: '/',
+    component: DashboardLayout,
+    redirect: '/person-extract',
+    children: [
+      {
+        path: 'person-extract',
+        name: 'PersonExtract',
+        component: () => import('../views/PersonExtract.vue')
+      }
+    ]
   }
 ];
 

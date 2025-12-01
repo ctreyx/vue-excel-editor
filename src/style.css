@@ -3,10 +3,9 @@
   line-height: 1.5;
   font-weight: 400;
   
-  /* 强制浅色主题基础，因为我们设计的是 Modern Light */
-  color-scheme: light;
-  color: #1a1a1a;
-  background-color: #ffffff;
+  color-scheme: dark;
+  color: #e0e0e0;
+  background-color: #1a1a2e;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -19,7 +18,8 @@ body {
   padding: 0;
   width: 100%;
   min-height: 100vh;
-  overflow-y: auto;
+  overflow: hidden; /* Layout handles scroll */
+  background-color: #1a1a2e;
 }
 
 #app {
@@ -29,22 +29,22 @@ body {
   padding: 0;
 }
 
-/* 滚动条美化 */
+/* 滚动条美化 - Adaptive */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--input-bg, rgba(0, 0, 0, 0.2));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
+  background: var(--border-color, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--text-tertiary, rgba(255, 255, 255, 0.3));
 }
 
