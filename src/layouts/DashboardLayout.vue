@@ -130,6 +130,20 @@ onMounted(() => {
   height: 100vh;
   overflow: hidden;
   transition: background 0.5s ease;
+  background-size: 400% 400%;
+  animation: gradientFlow 15s ease infinite;
+}
+
+@keyframes gradientFlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* Sidebar */
@@ -503,7 +517,8 @@ onMounted(() => {
   --dropdown-bg: rgba(20, 20, 35, 0.95);
   --accent-color: #00d2ff;
 
-  background: radial-gradient(circle at top left, #1a1a2e, #16213e, #0f3460);
+  background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+  background-size: 400% 400%;
   color: var(--text-primary);
 }
 .theme-blue .sidebar { 
@@ -523,7 +538,8 @@ onMounted(() => {
   --dropdown-bg: rgba(10, 10, 10, 0.95);
   --accent-color: #00ff9d;
 
-  background: #050505;
+  background: linear-gradient(135deg, #232526 0%, #414345 100%);
+  background-size: 400% 400%;
   color: var(--text-primary);
 }
 .theme-black .sidebar { 
@@ -542,10 +558,12 @@ onMounted(() => {
   --border-color: rgba(255, 255, 255, 0.5);
   --input-bg: rgba(255, 255, 255, 0.3);
   --dropdown-bg: rgba(255, 255, 255, 0.9);
-  --accent-color: #8e24aa;
+  --accent-color: #333;
 
-  background: radial-gradient(circle at bottom right, #6a1b9a, #8e24aa, #ab47bc); /* Lighter purple gradient */
+  background: linear-gradient(135deg, #ff758c 0%, #764ba2 50%, #667eea 100%);
+  background-size: 400% 400%;
   color: var(--text-primary);
+ 
 }
 .theme-purple .sidebar {
   background: var(--bg-panel); /* Much more opaque white */
@@ -635,7 +653,8 @@ onMounted(() => {
   --dropdown-bg: #ffffff;
   --accent-color: #2c3e50;
 
-  background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+  background: linear-gradient(135deg, #FFDEE9 0%, #B5FFFC 100%);
+  background-size: 400% 400%;
   color: var(--text-primary);
 }
 .theme-white .sidebar {

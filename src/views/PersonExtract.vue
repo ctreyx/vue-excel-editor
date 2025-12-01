@@ -63,9 +63,23 @@
                 </div>
                 
                 <div v-if="openDropdown === header" class="dropdown-menu">
-                  <div class="dropdown-item" v-for="col in sourceColumns" :key="col" @click="toggleMapping(header, col)">
-                    <input type="checkbox" :checked="mapping[header]?.includes(col)" />
-                    <span>{{ col }}</span>
+                  <div class="dropdown-search-wrapper" @click.stop>
+                    <input 
+                      type="text" 
+                      v-model="searchQuery" 
+                      class="dropdown-search-input" 
+                      placeholder="搜索列名..." 
+                      :ref="(el) => { if (el) (el as HTMLInputElement).focus() }"
+                    />
+                  </div>
+                  <div class="dropdown-list">
+                    <div class="dropdown-item" v-for="col in filteredSourceColumns" :key="col" @click="toggleMapping(header, col)">
+                      <input type="checkbox" :checked="mapping[header]?.includes(col)" />
+                      <span>{{ col }}</span>
+                    </div>
+                    <div v-if="filteredSourceColumns.length === 0" class="dropdown-empty">
+                      无匹配结果
+                    </div>
                   </div>
                 </div>
               </div>
@@ -98,6 +112,7 @@ const templateHeaders = ref<string[] | null>(null);
 const mapping = ref<Record<string,string[]>>({});
 const outputData = ref<any[]>([]);
 const openDropdown = ref<string | null>(null);
+const searchQuery = ref('');
 
 const prettyJson = computed(() => JSON.stringify(outputData.value, null, 2));
 
@@ -110,6 +125,13 @@ const sourceColumns = computed(() => {
     }
   });
   return Array.from(keys);
+});
+
+const filteredSourceColumns = computed(() => {
+  if (!sourceColumns.value) return [];
+  if (!searchQuery.value) return sourceColumns.value;
+  const q = searchQuery.value.toLowerCase();
+  return sourceColumns.value.filter(col => col.toLowerCase().includes(q));
 });
 
 const previewRows = computed(() => {
@@ -135,7 +157,12 @@ onUnmounted(() => {
 });
 
 function toggleDropdown(header: string) {
-  openDropdown.value = openDropdown.value === header ? null : header;
+  if (openDropdown.value === header) {
+    openDropdown.value = null;
+  } else {
+    openDropdown.value = header;
+    searchQuery.value = '';
+  }
 }
 
 function toggleMapping(header: string, col: string) {
@@ -529,7 +556,7 @@ button {
   border: 1px solid var(--border-color);
   padding: 8px 20px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -662,8 +689,7 @@ button:not(:disabled):nth-child(3) {
   top: calc(100% + 8px);
   left: 0;
   width: 100%;
-  max-height: 240px;
-  overflow-y: auto;
+  max-height: 300px;
   background: var(--dropdown-bg, var(--bg-panel));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -671,7 +697,45 @@ button:not(:disabled):nth-child(3) {
   border-radius: 12px;
   z-index: 100;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dropdown-search-wrapper {
   padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.dropdown-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.dropdown-search-input:focus {
+  border-color: var(--accent-color);
+}
+
+.dropdown-list {
+  overflow-y: auto;
+  padding: 8px;
+  flex: 1;
+}
+
+.dropdown-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 12px;
 }
 
 .dropdown-item {

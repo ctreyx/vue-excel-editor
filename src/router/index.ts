@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHashHistory } from 'vue-router';
 import DashboardLayout from '../layouts/DashboardLayout.vue';
 
 const routes = [
@@ -17,8 +17,8 @@ const routes = [
 ];
 
 const router = createRouter({
-  // use Vite's base (imported at build time) so history works when site is served under a sub-path
-  history: createWebHistory(import.meta.env.BASE_URL),
+  // Switch to Hash mode for GitHub Pages compatibility
+  history: createWebHashHistory(),
   routes
 });
 
