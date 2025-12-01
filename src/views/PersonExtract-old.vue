@@ -7,9 +7,7 @@
         <h3>1) 上传待提取的 Excel（源表）</h3>
         <input type="file" accept=".xls,.xlsx" @change="onSourceFile" />
         <div v-if="sourceData">
-          总行数：{{ sourceData.length }}
-          <br/>
-          <small>检测到的列：{{ sourceColumns.join(', ') }}</small>
+          行数：{{ sourceData.length }}
         </div>
         <div v-if="sourceData && sourceData.length" class="source-preview">
           <h4>源表预览（前 {{ previewRows.length }} 行）</h4>
@@ -40,34 +38,24 @@
     </div>
 
     <div class="mapping" v-if="templateHeaders && templateHeaders.length">
-      <h4>3) 字段映射确认（支持多选，优先使用靠前的非空值）</h4>
+      <h4>3) 字段映射确认（可手动修改）</h4>
       <table class="mapping-table">
         <thead>
           <tr>
-            <th style="width: 30%">模版字段</th>
-            <th>映射到源表列 (可多选)</th>
+            <th>模版字段</th>
+            <th>映射到源表列</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="header in templateHeaders" :key="header">
             <td>{{ header }}</td>
             <td>
-              <div class="multi-select-container">
-                <div class="selected-tags" @click="toggleDropdown(header)">
-                  <span v-if="!mapping[header] || mapping[header].length === 0" class="placeholder">点击选择源列...</span>
-                  <span v-for="col in mapping[header]" :key="col" class="tag">
-                    {{ col }} <span class="remove-tag" @click.stop="toggleMapping(header, col)">×</span>
-                  </span>
-                  <span class="arrow">▼</span>
-                </div>
-                
-                <div v-if="openDropdown === header" class="dropdown-menu">
-                  <div class="dropdown-item" v-for="col in sourceColumns" :key="col" @click="toggleMapping(header, col)">
-                    <input type="checkbox" :checked="mapping[header]?.includes(col)" />
-                    <span>{{ col }}</span>
-                  </div>
-                </div>
-              </div>
+              <select v-model="mapping[header]">
+                <option value="">(请选择源表列)</option>
+                <option v-for="col in sourceColumns" :key="col" :value="col">
+                  {{ col }}
+                </option>
+              </select>
             </td>
           </tr>
         </tbody>
@@ -90,25 +78,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
 
 const sourceData = ref<any[] | null>(null);
 const templateHeaders = ref<string[] | null>(null);
-const mapping = ref<Record<string,string[]>>({});
+const mapping = ref<Record<string,string>>({});
 const outputData = ref<any[]>([]);
-const openDropdown = ref<string | null>(null);
 
 const prettyJson = computed(() => JSON.stringify(outputData.value, null, 2));
 
 const sourceColumns = computed(() => {
   if (!sourceData.value || sourceData.value.length === 0) return [];
-  const keys = new Set<string>();
-  sourceData.value.forEach(row => {
-    if (row && typeof row === 'object') {
-      Object.keys(row).forEach(k => keys.add(k));
-    }
-  });
-  return Array.from(keys);
+  return Object.keys(sourceData.value[0]);
 });
 
 const previewRows = computed(() => {
@@ -116,45 +97,19 @@ const previewRows = computed(() => {
   return sourceData.value.slice(0, 5);
 });
 
-// Close dropdown when clicking outside
-function closeDropdown(e: Event) {
-  if (openDropdown.value) {
-    const target = e.target as HTMLElement;
-    if (!target.closest('.multi-select-container')) {
-      openDropdown.value = null;
-    }
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', closeDropdown);
-});
-onUnmounted(() => {
-  document.removeEventListener('click', closeDropdown);
-});
-
-function toggleDropdown(header: string) {
-  openDropdown.value = openDropdown.value === header ? null : header;
-}
-
-function toggleMapping(header: string, col: string) {
-  if (!mapping.value[header]) {
-    mapping.value[header] = [];
-  }
-  const idx = mapping.value[header].indexOf(col);
-  if (idx > -1) {
-    mapping.value[header].splice(idx, 1);
-  } else {
-    mapping.value[header].push(col);
-  }
-}
-
 // 解析上传的 Excel 文件
 async function readWorkbookFromFile(file: File) {
   const data = await file.arrayBuffer();
   const XLSX = await import('xlsx');
   const wb = XLSX.read(data, { type: 'array' });
-  return { XLSX, wb };
+  const sheetName = wb.SheetNames[0];
+  if (!sheetName) {
+    alert('Excel 文件为空或无法读取');
+    throw new Error('No sheets found');
+  }
+  const ws = wb.Sheets[sheetName];
+  if (!ws) throw new Error('Sheet content is empty');
+  return { XLSX, wb, ws };
 }
 
 async function onSourceFile(e: Event) {
@@ -207,22 +162,13 @@ async function onSourceFile(e: Event) {
   }
 
   sourceData.value = allData;
-  // 如果已有模版，尝试自动映射
-  if (templateHeaders.value) {
-    autoMap();
-  }
 }
 
 async function onTemplateFile(e: Event) {
   const input = e.target as HTMLInputElement;
   const file = input.files && input.files[0];
   if (!file) return;
-  const { XLSX, wb } = await readWorkbookFromFile(file);
-  const sheetName = wb.SheetNames[0];
-  if (!sheetName) return;
-  const ws = wb.Sheets[sheetName];
-  if (!ws) return;
-  
+  const { XLSX, ws } = await readWorkbookFromFile(file);
   // 读取首行作为模版字段（寻找第一行非空）
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
   let headerRow: any[] | undefined = undefined;
@@ -249,7 +195,7 @@ function normalize(s: string) {
   return s.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase();
 }
 
-function findBestMatch(header: string, sourceCols: string[]): string | null {
+function findBestMatch(header: string, sourceCols: string[]) {
   const norm = normalize(header);
   // 常见别名
   const synonyms: Record<string,string> = {
@@ -257,14 +203,13 @@ function findBestMatch(header: string, sourceCols: string[]): string | null {
     '联系方式':'手机号',
     '联系电话':'手机号',
     '手机号':'手机号',
-    '所在部门/公司': '部门', 
+    '所在部门/公司': '部门', // 优先映射到部门
     '所在部门': '部门',
     '部门': '部门',
     '公司': '公司',
     '姓名': '姓名',
     '性别': '性别',
-    '年龄': '年龄',
-    '岁数': '年龄',
+    '年龄': '年龄(岁)',
     '政治面貌': '政治面貌'
   };
   
@@ -274,6 +219,7 @@ function findBestMatch(header: string, sourceCols: string[]): string | null {
   // 2. 别名匹配
   if (synonyms[header]) {
     const target = synonyms[header];
+    // 尝试在源列中找到别名对应的列（支持模糊）
     const match = sourceCols.find(c => c === target || c.includes(target));
     if (match) return match;
   }
@@ -287,16 +233,16 @@ function findBestMatch(header: string, sourceCols: string[]): string | null {
   for (const s of sourceCols) {
     if (normalize(s).includes(norm) || norm.includes(normalize(s))) return s;
   }
-  return null;
+  return '';
 }
 
 function autoMap() {
   if (!sourceData.value || !templateHeaders.value) return;
   const cols = sourceColumns.value;
-  const m: Record<string,string[]> = {};
+  const m: Record<string,string> = {};
   for (const th of templateHeaders.value) {
     const match = findBestMatch(th, cols);
-    m[th] = match ? [match] : [];
+    m[th] = match || '';
   }
   mapping.value = m;
 }
@@ -306,6 +252,7 @@ function generateJson() {
   if (!sourceData.value || !templateHeaders.value) return;
   
   // 1. 按照源表的“公司”列进行排序（如果存在）
+  // 优先找明确叫“公司”的列，其次找包含“公司”的列
   const companyCol = sourceColumns.value.find(c => c === '公司') || sourceColumns.value.find(c => c.includes('公司'));
   
   let dataProcess = [...sourceData.value];
@@ -322,16 +269,8 @@ function generateJson() {
   for (const row of dataProcess) {
     const outRow: Record<string, any> = {};
     for (const th of templateHeaders.value) {
-      const cols = map[th] || [];
-      // 尝试从映射的列中找到第一个非空值
-      let val = '';
-      for (const col of cols) {
-        if (row[col] !== undefined && row[col] !== '' && row[col] !== null) {
-          val = row[col];
-          break;
-        }
-      }
-      outRow[th] = val;
+      const col = map[th];
+      outRow[th] = col ? row[col] ?? '' : '';
     }
     outputData.value.push(outRow);
   }
@@ -364,78 +303,17 @@ function downloadJson() {
 </script>
 
 <style scoped>
-.person-extract-page { padding: 16px; font-family: sans-serif; }
+.person-extract-page { padding: 16px; }
 .upload-row { display:flex; gap:20px; margin-bottom:12px }
 .uploader { border:1px solid #ddd; padding:12px; border-radius:6px; width:50% }
-.actions { margin:12px 0; display: flex; gap: 10px; }
+.actions { margin:12px 0 }
 .mapping table { border-collapse: collapse; width:100%; }
-.mapping th, .mapping td { border:1px solid #ddd; padding:8px; text-align: left; }
-.output textarea { font-family: monospace; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+.mapping th, .mapping td { border:1px solid #ddd; padding:6px }
+.output textarea { font-family: monospace }
 
 .source-preview { margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 10px; }
 .table-scroll { overflow-x: auto; max-width: 100%; }
 .preview-table { border-collapse: collapse; width: 100%; font-size: 12px; }
 .preview-table th, .preview-table td { border: 1px solid #eee; padding: 4px; white-space: nowrap; }
 .preview-table th { background: #f9f9f9; font-weight: bold; }
-
-/* Multi-select styles */
-.multi-select-container {
-  position: relative;
-  width: 100%;
-}
-.selected-tags {
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 4px;
-  min-height: 32px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  cursor: pointer;
-  background: #fff;
-  align-items: center;
-}
-.selected-tags:hover { border-color: #888; }
-.tag {
-  background: #e0f0ff;
-  border: 1px solid #b0d0ff;
-  border-radius: 3px;
-  padding: 2px 6px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.remove-tag {
-  cursor: pointer;
-  color: #666;
-  font-weight: bold;
-  margin-left: 4px;
-}
-.remove-tag:hover { color: #d00; }
-.placeholder { color: #999; font-size: 12px; }
-.arrow { margin-left: auto; font-size: 10px; color: #999; }
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  max-height: 200px;
-  overflow-y: auto;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-top: none;
-  z-index: 100;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-.dropdown-item {
-  padding: 6px 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.dropdown-item:hover { background: #f5f5f5; }
-.dropdown-item input { cursor: pointer; }
 </style>
