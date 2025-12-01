@@ -96,6 +96,13 @@
       <button @click="downloadJson" :disabled="!outputData.length">下载 JSON</button>
     </div>
 
+    <div class="warning-box" v-if="warningMessages.length > 0">
+      <h4>⚠️ 映射警告</h4>
+      <ul>
+        <li v-for="(msg, index) in warningMessages" :key="index">{{ msg }}</li>
+      </ul>
+    </div>
+
     <div class="output" v-if="outputData.length">
       <h4>输出 JSON（预览，已按公司排序）</h4>
       <textarea rows="12" style="width:98%;">{{ prettyJson }}</textarea>
@@ -113,6 +120,7 @@ const mapping = ref<Record<string,string[]>>({});
 const outputData = ref<any[]>([]);
 const openDropdown = ref<string | null>(null);
 const searchQuery = ref('');
+const warningMessages = ref<string[]>([]);
 
 const prettyJson = computed(() => JSON.stringify(outputData.value, null, 2));
 
@@ -192,6 +200,8 @@ async function onSourceFile(e: Event) {
   const { XLSX, wb } = await readWorkbookFromFile(file);
   
   let allData: any[] = [];
+  const skippedSheets: string[] = [];
+  warningMessages.value = []; // 清空之前的警告
 
   // 遍历所有 Sheet
   for (const sheetName of wb.SheetNames) {
@@ -211,7 +221,10 @@ async function onSourceFile(e: Event) {
       }
     }
 
-    if (headerIndex === -1) continue; // 该 Sheet 没找到有效表头，跳过
+    if (headerIndex === -1) {
+      skippedSheets.push(sheetName);
+      continue; // 该 Sheet 没找到有效表头，跳过
+    }
 
     // 从 headerIndex 开始解析
     const headers = (rows[headerIndex] || []).map(h => String(h).trim());
@@ -224,14 +237,19 @@ async function onSourceFile(e: Event) {
           obj[h] = row[index] !== undefined ? row[index] : '';
         }
       });
+      obj.__sheetName = sheetName; // 记录来源 Sheet
       return obj;
-    }).filter(obj => Object.values(obj).some(v => v !== '')); // 过滤空行
+    }).filter(obj => Object.values(obj).some(v => v !== '' && v !== sheetName)); // 过滤空行
 
     allData = allData.concat(sheetJson);
   }
 
+  if (skippedSheets.length > 0) {
+    warningMessages.value.push(`以下 Sheet 未检测到“姓名”列而被跳过：${skippedSheets.join(', ')}`);
+  }
+
   if (allData.length === 0) {
-    alert('未在任何 Sheet 中找到包含“姓名”的表头数据');
+    warningMessages.value.push('未在任何 Sheet 中找到包含“姓名”的表头数据');
   }
 
   sourceData.value = allData;
@@ -331,6 +349,7 @@ function autoMap() {
 
 function generateJson() {
   outputData.value = [];
+  warningMessages.value = []; // 清空之前的警告
   if (!sourceData.value || !templateHeaders.value) return;
   
   // 1. 按照源表的“公司”列进行排序（如果存在）
@@ -346,9 +365,22 @@ function generateJson() {
   }
 
   const map = mapping.value;
+  
+  // 统计每个 Sheet 的总行数
+  const sheetCounts: Record<string, number> = {};
+  dataProcess.forEach(r => {
+    const s = r.__sheetName || 'Unknown';
+    sheetCounts[s] = (sheetCounts[s] || 0) + 1;
+  });
+
+  // 统计每个 Sheet 中每个字段的缺失数
+  const sheetMissingCounts: Record<string, Record<string, number>> = {};
+
   // Build rows according to template
   for (const row of dataProcess) {
     const outRow: Record<string, any> = {};
+    const sheetName = row.__sheetName || 'Unknown';
+
     for (const th of templateHeaders.value) {
       const cols = map[th] || [];
       // 尝试从映射的列中找到第一个非空值
@@ -360,8 +392,34 @@ function generateJson() {
         }
       }
       outRow[th] = val;
+
+      // 统计缺失
+      if (!val) {
+        if (!sheetMissingCounts[sheetName]) sheetMissingCounts[sheetName] = {};
+        sheetMissingCounts[sheetName][th] = (sheetMissingCounts[sheetName][th] || 0) + 1;
+      }
     }
     outputData.value.push(outRow);
+  }
+
+  // 检查是否有 Sheet 的某个字段完全缺失（即该 Sheet 所有行该字段都为空）
+  const warnings: string[] = [];
+  for (const sheet in sheetMissingCounts) {
+    const total = sheetCounts[sheet];
+    const missingCols = [];
+    for (const col in sheetMissingCounts[sheet]) {
+      // 如果缺失数等于该 Sheet 总行数，说明该 Sheet 完全没有映射到该字段
+      if (sheetMissingCounts[sheet][col] === total) {
+        missingCols.push(col);
+      }
+    }
+    if (missingCols.length > 0) {
+      warnings.push(`Sheet "${sheet}" 未成功映射字段: ${missingCols.join(', ')}`);
+    }
+  }
+
+  if (warnings.length > 0) {
+    warningMessages.value.push(...warnings);
   }
 }
 
@@ -783,6 +841,46 @@ button:not(:disabled):nth-child(3) {
   border: solid #fff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
+}
+
+/* Warning Box */
+.warning-box {
+  margin: 20px 0;
+  padding: 16px;
+  background: rgba(255, 87, 34, 0.1);
+  border: 1px solid rgba(255, 87, 34, 0.3);
+  border-radius: 8px;
+  color: var(--text-primary);
+  backdrop-filter: blur(5px);
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.warning-box h4 {
+  margin: 0 0 12px 0;
+  color: #ff5722;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.warning-box ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+
+.warning-box li {
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Output Area */
